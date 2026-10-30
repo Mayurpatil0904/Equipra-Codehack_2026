@@ -16,8 +16,8 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(
-  _req: Express.Request,
-  file: Express.Multer.File,
+  _req: any,
+  file: { originalname: string },
   cb: multer.FileFilterCallback
 ) {
   const allowed = [".xlsx", ".xls", ".csv"];
