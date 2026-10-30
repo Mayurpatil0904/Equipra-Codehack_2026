@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+backend/.prisma/
+
+# Temp fix scripts
+fix_*.py
+.agent/
+**/.agent/
+
+# Misc
+*.log
+**/node_modules/
+**/.env
+**/.env.*
+!**/.env.example

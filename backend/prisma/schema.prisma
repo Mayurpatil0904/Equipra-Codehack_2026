@@ -1,0 +1,711 @@
+// prisma/schema.prisma
+// Run: npx prisma db push   (dev)
+//      npx prisma migrate dev  (production-ready migrations)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  FACULTY
+  ADMIN      // Lab Assistant / Admin
+}
+
+enum AvailabilityStatus {
+  available
+  issued
+  reserved
+  maintenance
+  inspection
+}
+
+enum FaultScanStatus {
+  not_scanned
+  scanned_ok_before
+  scanned_ok_after
+  fault_detected
+  fault_evaluation
+}
+
+enum RequestStatus {
+  pending_faculty
+  pending_lab
+  approved
+  rejected
+  issued
+  returned
+  returned_pending_inspection
+}
+
+enum RequestType {
+  individual
+  team
+}
+
+enum MessageSender {
+  student
+  faculty
+  lab
+}
+
+// ─────────────────────────────────────────────────────────────
+//  USERS
+// ─────────────────────────────────────────────────────────────
+
+model College {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  users     User[]
+  // ✅ NEW — editable display labels for student semester folders
+  semesterFolders SemesterFolder[]
+  projects        Project[]
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SEMESTER FOLDERS — editable display labels for the folder
+//  groupings shown in the admin Students tab. `key` matches the
+//  raw User.semester value (e.g. "1st"); `label` is the custom
+//  name an admin can rename it to (e.g. "First Year - Batch A").
+// ─────────────────────────────────────────────────────────────
+model SemesterFolder {
+  id        String   @id @default(uuid())
+  key       String   // e.g. "1st", "2nd" ... must match User.semester values
+  label     String   // editable display name
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college   College  @relation(fields: [collegeId], references: [id])
+  collegeId String
+
+  @@unique([collegeId, key])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  enrollmentId String   @unique  // e.g. PU-STU-001
+  name         String
+  email        String?  @unique
+  passwordHash String
+  role         Role
+  department   String
+  semester     String?            // Only for students: "1st".."8th"
+  isActive         Boolean  @default(true)
+  canManageAdmins  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  college   College @relation(fields: [collegeId], references: [id])
+  collegeId String
+
+  // Relations
+  requestsSubmitted  EquipmentRequest[] @relation("StudentRequests")
+  requestsSupervised EquipmentRequest[] @relation("FacultyRequests")
+  teamMemberships    TeamMember[]
+  teamsCreated       Team[]             @relation("ProfessorTeams")
+  messagesSent       RequestMessage[]
+  faultScansRun      FaultScan[]
+  feedbackSubmitted  Feedback[]
+  notifications      Notification[]
+  directMessages     DirectMessage[]    @relation("MessageSender")
+  directMessagesRecv DirectMessage[]    @relation("MessageReceiver")
+  // ✅ IoT Platform relations
+  projectsCreated    Project[]          @relation("ProjectCreator")
+  projectsGuided     Project[]          @relation("ProjectGuide")
+  projectMemberships ProjectMember[]
+  devicesOwned       Device[]
+  documentsUploaded  ProjectDocument[]
+  equipmentLinked    ProjectEquipment[]
+  compEntriesSubmitted CompetitionEntry[] @relation("CompEntrySubmitter")
+  projectTemplates     ProjectTemplate[]
+
+  @@index([enrollmentId])
+  @@index([role])
+  @@index([collegeId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  EQUIPMENT
+// ─────────────────────────────────────────────────────────────
+
+model Equipment {
+  id                 String             @id @default(uuid())
+  // ✅ NEW — human-readable display ID shown on fault-scan lookups, e.g. EQ-0001
+  equipmentId        String?            @unique
+  slug               String             @unique
+  name               String
+  category           String
+  description        String
+  typicalUses        String[]
+  labLocation        String
+  supervisorName     String
+
+  availabilityStatus AvailabilityStatus @default(available)
+  faultScanStatus    FaultScanStatus    @default(not_scanned)
+
+  conditionLog       String             @default("")
+  emoji              String             @default("📦")
+  imageUrl           String?
+
+  totalUnits         Int                @default(1)
+  availableUnits     Int                @default(1)
+  inspectionUnits    Int                @default(0)
+
+  // ✅ NEW — units sitting in a 24h post-return holding window
+  // (released to availableUnits automatically once availableAt passes,
+  //  or earlier if an admin manually clears them)
+  pendingUnits       Int                @default(0)
+  // earliest time at which pendingUnits may be released — null if none pending
+  availableAt        DateTime?
+
+  lastIssuedTo       String?
+  returnDate         String?
+
+  // ✅ NEW — visibility / ownership controls
+  // department: null = visible to everyone (general lab equipment)
+  //             "Computer Science" etc. = only that department + admins/super-admins
+  department         String?
+  // visibleToStudents: false = faculty/admin only (e.g. supervisor-only gear)
+  visibleToStudents  Boolean            @default(true)
+
+  isActive           Boolean            @default(true)
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  requests           EquipmentRequest[]
+  faultScans         FaultScan[]
+  timeline           EquipmentTimeline[]
+  projectLinks       ProjectEquipment[]
+
+  @@index([availabilityStatus])
+  @@index([category])
+  @@index([department])
+  @@index([equipmentId])
+}
+
+model EquipmentTimeline {
+  id          String    @id @default(uuid())
+  description String
+  status      String    // "success" | "pending" | "warning" | "error"
+  createdAt   DateTime  @default(now())
+
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipmentId String
+
+  @@index([equipmentId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  REQUESTS
+// ─────────────────────────────────────────────────────────────
+
+model EquipmentRequest {
+  id            String        @id @default(uuid())
+  requestCode   String        @unique  // e.g. REQ00042 — human-readable
+  project       String
+  purpose       String
+  description   String        @default("")
+  dateFrom      DateTime
+  dateTo        DateTime
+  status        RequestStatus @default(pending_faculty)
+  type          RequestType   @default(individual)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  qrToken         String?       @unique
+  issuedAt        DateTime?
+  returnedAt      DateTime?
+  conditionRating Int?
+  damageNotes     String?
+  damagePercent   Int?
+
+  // Relations
+  equipment     Equipment     @relation(fields: [equipmentId], references: [id])
+  equipmentId   String
+
+  student       User          @relation("StudentRequests", fields: [studentId], references: [id])
+  studentId     String
+
+  faculty       User          @relation("FacultyRequests", fields: [facultyId], references: [id])
+  facultyId     String
+
+  team          Team?         @relation(fields: [teamId], references: [id])
+  teamId        String?
+
+  messages      RequestMessage[]
+  projectLink   ProjectEquipment?
+
+  @@index([studentId])
+  @@index([facultyId])
+  @@index([status])
+  @@index([equipmentId])
+  @@index([teamId])
+}
+
+model RequestMessage {
+  id         String        @id @default(uuid())
+  text       String
+  wordCount  Int
+  sender     MessageSender
+  createdAt  DateTime      @default(now())
+
+  request    EquipmentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId  String
+
+  sentBy     User          @relation(fields: [sentById], references: [id])
+  sentById   String
+
+  @@index([requestId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TEAMS
+// ─────────────────────────────────────────────────────────────
+
+model Team {
+  id          String   @id @default(uuid())
+  teamCode    String   @unique  // e.g. TEAM-PU-0042
+  name        String
+  project     String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  professor   User     @relation("ProfessorTeams", fields: [professorId], references: [id])
+  professorId String
+
+  members     TeamMember[]
+  requests    EquipmentRequest[]
+
+  @@index([professorId])
+  @@index([active])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  role      String   @default("Member")  // "Leader" | "Member"
+  joinedAt  DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FAULT SCANS
+// ─────────────────────────────────────────────────────────────
+
+model FaultScan {
+  id          String   @id @default(uuid())
+  result      String   // "ok" | "fault"
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  equipmentId String
+
+  scannedBy   User     @relation(fields: [scannedById], references: [id])
+  scannedById String
+
+  @@index([equipmentId])
+  @@index([scannedById])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FEEDBACK
+// ─────────────────────────────────────────────────────────────
+
+model Feedback {
+  id          String   @id @default(uuid())
+  department  String
+  type        String
+  message     String
+  rating      Int      @default(0)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  submittedBy   User   @relation(fields: [submittedById], references: [id])
+  submittedById String
+
+  @@index([isRead])
+  @@index([department])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DIRECT MESSAGES (threads between users)
+// ─────────────────────────────────────────────────────────────
+
+model DirectMessage {
+  id        String   @id @default(uuid())
+  text      String
+  wordCount Int
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  sender    User     @relation("MessageSender",   fields: [senderId],   references: [id])
+  senderId  String
+
+  receiver  User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId String
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  type      String   // "request_update" | "message" | "team_update" | "feedback"
+  isRead    Boolean  @default(false)
+  link      String?  // e.g. "/my-requests"
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId, isRead])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  COUNTERS (for sequential code generation)
+// ─────────────────────────────────────────────────────────────
+
+model Counter {
+  id    String @id
+  value Int    @default(0)
+}
+
+// ─────────────────────────────────────────────────────────────
+// EQUIPRA IoT PLATFORM — Project-centric architecture
+// Phase 1 (minimal): Project + Device + Telemetry
+// ─────────────────────────────────────────────────────────────
+
+enum ProjectType {
+  HARDWARE
+  SOFTWARE
+  HYBRID
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum DeviceType {
+  ESP32
+  ESP8266
+  ARDUINO
+  RASPBERRY_PI
+  NODEMCU
+  STM32
+  OTHER
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+}
+
+enum TelemetryDataType {
+  NUMBER
+  BOOLEAN
+  STRING
+}
+
+enum WidgetType {
+  GAUGE
+  CHART
+  STATUS_CARD
+  LED
+  VALUE
+}
+
+enum DocumentType {
+  REPORT
+  PPT
+  POSTER
+  CIRCUIT_DIAGRAM
+  SOURCE_CODE
+  VIDEO
+  IMAGE
+  OTHER
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  projectCode     String        @unique  // PRJ-0001
+  name            String
+  description     String
+  department      String
+  technologyStack String[]
+  projectType     ProjectType   @default(HYBRID)
+  status          ProjectStatus @default(ACTIVE)
+  academicYear    String        @default("2025-26")
+  semester        String?
+  githubRepo      String?
+  demoVideo       String?
+
+  college         College       @relation(fields: [collegeId], references: [id])
+  collegeId       String
+
+  guide           User          @relation("ProjectGuide", fields: [guideId], references: [id])
+  guideId         String
+
+  createdBy       User          @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdById     String
+
+  members         ProjectMember[]
+  devices         Device[]
+  telemetryDefs   TelemetryDefinition[]
+  timeline        ProjectTimeline[]
+  documents       ProjectDocument[]
+  equipmentLinks  ProjectEquipment[]
+  competitionEntries CompetitionEntry[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([collegeId])
+  @@index([status])
+}
+
+// A link/document reference attached to a project (Google Drive link,
+// GitHub repo path, YouTube demo, etc). No file storage required —
+// students paste a URL, matching how githubRepo/demoVideo already work.
+model ProjectDocument {
+  id           String       @id @default(uuid())
+  name         String
+  type         DocumentType @default(OTHER)
+  url          String
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String
+
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+
+  createdAt    DateTime     @default(now())
+
+  @@index([projectId])
+}
+
+// Links equipment (optionally via an existing issued EquipmentRequest)
+// to a project — "my ESP32 dev kit is linked to my Smart Lab project".
+model ProjectEquipment {
+  id          String            @id @default(uuid())
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+
+  equipment   Equipment         @relation(fields: [equipmentId], references: [id])
+  equipmentId String
+
+  request     EquipmentRequest? @relation(fields: [requestId], references: [id])
+  requestId   String?           @unique
+
+  linkedBy    User              @relation(fields: [linkedById], references: [id])
+  linkedById  String
+
+  linkedAt    DateTime          @default(now())
+
+  @@unique([projectId, equipmentId])
+  @@index([projectId])
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  role      String   @default("Member")
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model ProjectTimeline {
+  id          String   @id @default(uuid())
+  event       String
+  description String?
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+
+  createdAt   DateTime @default(now())
+}
+
+model Device {
+  id              String       @id @default(uuid())
+  deviceCode      String       @unique  // DEV-0001
+  name            String
+  type            DeviceType   @default(ESP32)
+  // Students see the raw key exactly ONCE — at creation, or right after a
+  // regenerate. We never store or return the plaintext again after that;
+  // only a SHA-256 hash (for auth lookup) and a short prefix (for display,
+  // e.g. "ek_a1b2c3d4…" so a device can still be identified in the UI).
+  apiKeyHash      String       @unique
+  apiKeyPrefix    String
+  // Reversible encryption (AES-256-GCM) so the key can be viewed again later
+  // via "View Key" — apiKeyHash above is still what's used to authenticate
+  // incoming telemetry, this field is only ever decrypted for display.
+  apiKeyEncrypted String
+  firmwareVersion String?
+  ipAddress       String?
+  status          DeviceStatus @default(OFFLINE)
+  lastSeenAt      DateTime?
+  wifiSignal      Int?
+  batteryLevel    Int?
+  notes           String?
+
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+
+  owner           User         @relation(fields: [ownerId], references: [id])
+  ownerId         String
+
+  telemetryData   TelemetryData[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([apiKeyHash])
+}
+
+// Admin/student defines what telemetry fields this project will send.
+// e.g. { fieldName: "temperature", label: "Temperature", unit: "°C", widgetType: GAUGE }
+model TelemetryDefinition {
+  id            String            @id @default(uuid())
+  fieldName     String            // must match JSON key sent by ESP32
+  label         String            // display name
+  unit          String?           // "°C", "ppm", null for boolean
+  dataType      TelemetryDataType @default(NUMBER)
+  widgetType    WidgetType        @default(VALUE)
+  thresholdMin  Float?
+  thresholdMax  Float?
+  color         String?
+  sortOrder     Int               @default(0)
+
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String
+
+  @@unique([projectId, fieldName])
+}
+
+// Each row = one telemetry POST from a device.
+// payload is raw JSON: { "temperature": 32.5, "gasLevel": 180, "doorStatus": true }
+model TelemetryData {
+  id          String   @id @default(uuid())
+  payload     Json
+
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId    String
+
+  receivedAt  DateTime @default(now())
+
+  @@index([deviceId, receivedAt])
+}
+
+// Competition Portal
+enum CompEntryStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+model Competition {
+  id          String   @id @default(uuid())
+  name        String
+  organizer   String?
+  deadline    DateTime?
+  description String?
+  website     String?
+  source      String?  // "manual" | "ai"
+  category    String?  // "hackathon" | "competition" | "expo" | "workshop"
+  eligibility String?  // "all" | "undergrad" | "postgrad"
+  prize       String?
+  regLink     String?  // direct registration URL
+  imageUrl    String?
+  location    String?  // "Online" | city name
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  entries     CompetitionEntry[]
+}
+
+model CompetitionEntry {
+  id            String          @id @default(uuid())
+  status        CompEntryStatus @default(DRAFT)
+  proposal      String?
+  presentation  String?
+  report        String?
+  video         String?
+  poster        String?
+  notes         String?
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String
+  competition   Competition     @relation(fields: [competitionId], references: [id])
+  competitionId String
+  submittedBy   User            @relation("CompEntrySubmitter", fields: [submittedById], references: [id])
+  submittedById String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  @@unique([projectId, competitionId])
+  @@index([projectId])
+  @@index([competitionId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PROJECT TEMPLATES — reusable project blueprints
+// ─────────────────────────────────────────────────────────────
+
+model ProjectTemplate {
+  id              String      @id @default(uuid())
+  name            String
+  description     String
+  department      String?
+  projectType     ProjectType @default(HYBRID)
+  technologyStack String[]
+  // JSON array of telemetry definition presets
+  // e.g. [{ fieldName: "temperature", label: "Temperature", unit: "°C", dataType: "NUMBER", widgetType: "GAUGE" }]
+  telemetryPresets Json       @default("[]")
+  isPublic        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  createdBy       User        @relation(fields: [createdById], references: [id])
+  createdById     String
+
+  @@index([isPublic])
+}
