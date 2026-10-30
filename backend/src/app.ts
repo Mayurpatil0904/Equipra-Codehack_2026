@@ -149,41 +149,31 @@ app.get("/health", (_req, res) => {
   });
 });
 
-// API Routes
-app.use("/api/auth", authRoutes);
+// API Routes (mounted under both /api and root)
+const registerRoutes = (prefix: string) => {
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/search`, searchRoutes);
+  app.use(`${prefix}/equipment`, equipmentRoutes);
+  app.use(`${prefix}/requests`, requestsRoutes);
+  app.use(`${prefix}/teams`, teamsRoutes);
+  app.use(`${prefix}/fault-scans`, faultScanRoutes);
+  app.use(`${prefix}/feedback`, feedbackRoutes);
+  app.use(`${prefix}/messages`, messagesRoutes);
+  app.use(`${prefix}/notifications`, notificationsRoutes);
+  app.use(`${prefix}/admin`, adminRoutes);
+  app.use(`${prefix}/professors`, professorsRoutes);
+  app.use(`${prefix}/projects`, projectsRoutes);
+  app.use(`${prefix}/telemetry`, telemetryRoutes);
+  app.use(`${prefix}/analytics`, analyticsRoutes);
+  app.use(`${prefix}/competitions`, competitionsRoutes);
+  app.use(`${prefix}/lab-analytics`, labAnalyticsRoutes);
+  app.use(`${prefix}/templates`, templatesRoutes);
+  app.use(`${prefix}/ai`, aiRoutes);
+  app.use(`${prefix}/showcase`, showcaseRoutes);
+};
 
-app.use("/api/search", searchRoutes);
-
-app.use("/api/equipment", equipmentRoutes);
-
-app.use("/api/requests", requestsRoutes);
-
-app.use("/api/teams", teamsRoutes);
-
-app.use("/api/fault-scans", faultScanRoutes);
-
-app.use("/api/feedback", feedbackRoutes);
-
-app.use("/api/messages", messagesRoutes);
-
-app.use(
-  "/api/notifications",
-  notificationsRoutes
-);
-
-app.use("/api/admin", adminRoutes);
-
-app.use("/api/professors", professorsRoutes);
-
-// ✅ NEW — IoT Module
-app.use("/api/projects",  projectsRoutes);
-app.use("/api/telemetry", telemetryRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/competitions", competitionsRoutes);
-app.use("/api/lab-analytics", labAnalyticsRoutes);
-app.use("/api/templates", templatesRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/showcase", showcaseRoutes);
+registerRoutes("/api");
+registerRoutes("");
 
 // 404 Handler
 app.use((_req, res) => {

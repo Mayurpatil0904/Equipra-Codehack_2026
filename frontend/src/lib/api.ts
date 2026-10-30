@@ -1,7 +1,13 @@
 // src/lib/api.ts — typed API client for Equipra backend
-const BASE =
-  (import.meta as any).env?.VITE_API_URL ??
-  "https://equipra-codehack-2026-backend.onrender.com/api";
+const getBaseUrl = () => {
+  let url = (import.meta as any).env?.VITE_API_URL || "https://equipra-codehack-2026-backend.onrender.com/api";
+  url = url.trim().replace(/\/+$/, "");
+  if (!url.endsWith("/api")) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+const BASE = getBaseUrl();
 
 // ── Token helpers ─────────────────────────────────────────────
 export const token = {

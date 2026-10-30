@@ -4,6 +4,7 @@ import http from "http";
 import app from "./app";
 import prisma from "./lib/prisma";
 import { initSocket } from "./lib/socket";
+import { autoSeed } from "./lib/autoSeed";
 
 const PORT = process.env.PORT ?? 5000;
 
@@ -11,6 +12,15 @@ async function start() {
   try {
     await prisma.$connect();
     console.log("✅ Database connected");
+    try {
+      const collegeCount = await prisma.college.count();
+      if (collegeCount === 0) {
+        console.log("🌱 Database is empty! Running autoSeed...");
+        await autoSeed();
+      }
+    } catch (seedErr) {
+      console.error("⚠️ AutoSeed check failed:", seedErr);
+    }
 
     const server = http.createServer(app);
     initSocket(server);

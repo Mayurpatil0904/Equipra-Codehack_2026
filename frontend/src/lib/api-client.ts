@@ -1,6 +1,14 @@
 // src/lib/api.ts
 
-const BASE = (import.meta as any).env?.VITE_API_URL ?? "https://equipra-codehack-2026-backend.onrender.com/api";
+const getClientBaseUrl = () => {
+  let url = (import.meta as any).env?.VITE_API_URL || "https://equipra-codehack-2026-backend.onrender.com/api";
+  url = url.trim().replace(/\/+$/, "");
+  if (!url.endsWith("/api")) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+const BASE = getClientBaseUrl();
 
 // ── Token storage ─────────────────────────────────────────────
 export const tokenStore = {
