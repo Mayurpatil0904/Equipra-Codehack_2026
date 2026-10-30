@@ -128,4 +128,5 @@ npm start
 
 ## License
 
-Built for FAR AWAY International Hackathon 2026 — Logistics & Transit theme.
+Proprietary & Confidential. Copyright © 2026 Mayur Patil & Equipra Contributors. All Rights Reserved.  
+This project is made available on GitHub solely for evaluation and judging in **CodeHack 2026**. Unauthorized copying, cloning, or commercial redistribution is strictly prohibited. See [`LICENSE`](LICENSE) for full legal terms.

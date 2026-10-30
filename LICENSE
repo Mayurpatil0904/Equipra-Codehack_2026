@@ -1,0 +1,26 @@
+﻿PROPRIETARY AND CONFIDENTIAL SOURCE CODE LICENSE
+=================================================
+
+Copyright (c) 2026 Mayur Patil & Equipra Contributors. All Rights Reserved.
+
+NOTICE TO ALL USERS AND REVIEWERS:
+----------------------------------
+This repository, its source code, documentation, architecture diagrams, user interface assets, and associated files (the "Work") are the proprietary intellectual property of Mayur Patil and the Equipra development team.
+
+1. SCOPE OF PERMISSION
+This Work is made available on GitHub solely and exclusively for academic evaluation, peer review, and verification by official judges and organizers of CodeHack 2026.
+
+2. RESTRICTIONS
+Except as expressly permitted above:
+- You may NOT copy, reproduce, clone, fork, distribute, publish, sublicense, or sell this Work in whole or in part.
+- You may NOT use, adapt, or incorporate any portion of this codebase or its custom architecture (including but not limited to the Cross-Lab Collaboration engine, Fair-Access Allocation algorithms, Real-Time Hardware Telemetry workflows, or UI/UX components) into any other hackathon submission, academic capstone, commercial software, or public repository.
+- You may NOT decompile, disassemble, or reverse engineer any part of this Work.
+
+3. COPYRIGHT INFRINGEMENT & ACADEMIC INTEGRITY
+Any unauthorized duplication, submission, or derivation of this Work by third parties constitutes willful copyright infringement and a breach of hackathon academic integrity rules, subjecting infringing parties to immediate competition disqualification and legal liability under applicable intellectual property laws.
+
+4. DISCLAIMER
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+For permissions, licensing inquiries, or official evaluation access, contact:
+Mayur Patil (mayurpatil0904@gmail.com)
