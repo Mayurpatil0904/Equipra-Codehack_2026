@@ -37,9 +37,9 @@ export async function globalSearch(req: Request, res: Response, next: NextFuncti
       prisma.team.findMany({
         where: { OR: [
           { name: { contains: q, mode: "insensitive" } },
-          { teamId: { contains: q, mode: "insensitive" } },
+          { teamCode: { contains: q, mode: "insensitive" } },
         ]},
-        select: { id: true, name: true, teamId: true },
+        select: { id: true, name: true, teamCode: true },
         take: 5,
       }),
     ]);
