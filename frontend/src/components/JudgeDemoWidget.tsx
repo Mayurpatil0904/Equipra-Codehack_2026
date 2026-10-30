@@ -60,26 +60,15 @@ export function JudgeDemoWidget() {
       {open && (
         <div className="fixed bottom-6 left-4 sm:left-6 z-[250] w-[calc(100vw-2rem)] sm:w-[420px] max-h-[85vh] bg-card border border-amber-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border-b border-border p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                <Scale className="h-4 w-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                  Hackathon Evaluator Assistant
-                  <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.2 rounded bg-amber-500 text-white">
-                    48h Build
-                  </span>
-                </h3>
-                <p className="text-[11px] text-muted-foreground">
-                  Equipra: Unlocking Underused Equipment & Spaces
-                </p>
-              </div>
+          <div className="p-3 border-b border-border flex items-center justify-between bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Scale className="h-4 w-4 text-amber-500" />
+              <span className="font-bold text-xs text-foreground tracking-wide">Judge Assistant</span>
             </div>
             <button
               onClick={() => setOpen(false)}
               className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Close"
             >
               <X className="h-4 w-4" />
             </button>

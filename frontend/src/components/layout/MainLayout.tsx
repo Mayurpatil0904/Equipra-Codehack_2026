@@ -4,6 +4,8 @@ import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { FloatingChatWidget } from "@/components/FloatingChatWidget";
+import { JudgeDemoWidget } from "@/components/JudgeDemoWidget";
+
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
@@ -32,6 +34,7 @@ export function MainLayout() {
       <Footer />
       <FeedbackButton />
       <FloatingChatWidget />
-</div>
+      <JudgeDemoWidget />
+    </div>
   );
 }
