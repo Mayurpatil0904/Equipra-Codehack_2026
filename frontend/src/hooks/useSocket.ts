@@ -4,7 +4,7 @@ import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL =
   (import.meta as any).env?.VITE_API_URL?.replace("/api", "") ??
-  "http://localhost:5000";
+  "https://equipra-codehack-2026-backend.onrender.com";
 
 export function useSocket(projectId: string | undefined, onTelemetry: (data: any) => void) {
   const socketRef = useRef<Socket | null>(null);

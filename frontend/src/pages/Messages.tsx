@@ -16,7 +16,7 @@ import { token } from "@/lib/api";
 
 // Fetch contacts from backend
 async function fetchContacts(): Promise<any[]> {
-  const BASE = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000/api";
+  const BASE = (import.meta as any).env?.VITE_API_URL ?? "https://equipra-codehack-2026-backend.onrender.com/api";
   const res  = await fetch(`${BASE}/messages/contacts`, {
     headers: { Authorization: `Bearer ${token.get()}` },
   });

@@ -1,6 +1,6 @@
 // src/lib/api.ts
 
-const BASE = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000/api";
+const BASE = (import.meta as any).env?.VITE_API_URL ?? "https://equipra-codehack-2026-backend.onrender.com/api";
 
 // ── Token storage ─────────────────────────────────────────────
 export const tokenStore = {
