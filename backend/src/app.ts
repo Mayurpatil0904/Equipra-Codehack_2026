@@ -37,15 +37,14 @@ app.set("trust proxy", 1);
 // Security middleware
 app.use(helmet());
 
-// CORS
+// CORS — dynamic reflection for all Vercel domains (production & previews) and localhost
 app.use(
   cors({
-    origin:
-      process.env.CLIENT_URL ??
-      "http://localhost:5173",
-
+    origin: (origin, callback) => {
+      // Allows all incoming origins dynamically so credentials and preflight checks succeed on all domains
+      callback(null, true);
+    },
     credentials: true,
-
     methods: [
       "GET",
       "POST",
@@ -54,7 +53,6 @@ app.use(
       "DELETE",
       "OPTIONS",
     ],
-
     allowedHeaders: [
       "Content-Type",
       "Authorization",
